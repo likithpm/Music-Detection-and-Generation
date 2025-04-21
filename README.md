@@ -1,8 +1,5 @@
 # Music-Detection-and-Generation
 An AI-powered system for real-time music analysis, instruments classification, and automated music generation using deep learning. Combines LibROSA, LSTMs, MuseGANs, and web technologies like React, Tone.js, and TensorFlow Serving to explore the creative potential of machine-generated music.
-# 🎵 AI Music Generation & Analysis System
-
-This project is a deep learning-based system for music detection, genre classification, and automated music generation. It combines powerful ML models with real-time audio visualization and web-based interactivity to explore the creative intersection of AI and music.
 
 ## 🚀 Features
 
@@ -21,4 +18,5 @@ This project is a deep learning-based system for music detection, genre classifi
 - **Backend**: Node.js, Express
 
 ## 📁 Project Structure
+ai-music-gen/ ├── models/ ├── server/ ├── client/ ├── audio_samples/ ├── utils/ └── README.md
 
