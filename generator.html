@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Music Producer</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #181825;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #94e2d5;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section, .analysis-section, .composition-section, .output-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #1e1e2e;
+        }
+        h2 {
+            color: #89b4fa;
+            margin-top: 0;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #cba6f7;
+            color: #11111b;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #f5c2e7;
+        }
+        button:disabled {
+            background-color: #6c7086;
+            cursor: not-allowed;
+        }
+        .parameter-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .param-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #a6e3a1;
+        }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #45475a;
+            background-color: #313244;
+            color: #cdd6f4;
+        }
+        input[type="range"] {
+            padding: 0;
+        }
+        .visual-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .visualization {
+            flex: 1;
+            height: 100px;
+            background-color: #313244;
+            margin-right: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .log-section {
+            height: 100px;
+            overflow-y: auto;
+            background-color: #313244;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #a6e3a1;
+        }
+        .instrument-tracks {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .track {
+            display: flex;
+            align-items: center;
+            background-color: #313244;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .track-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
+        .track-volume {
+            width: 100px;
+        }
+        .toggle-btn {
+            background-color: #f38ba8;
+            color: #11111b;
+        }
+        .toggle-btn.active {
+            background-color: #a6e3a1;
+        }
+        progress {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #313244;
+        }
+        progress::-webkit-progress-bar {
+            background-color: #313244;
+            border-radius: 5px;
+        }
+        progress::-webkit-progress-value {
+            background-color: #cba6f7;
+            border-radius: 5px;
+        }
+        progress::-moz-progress-bar {
+            background-color: #cba6f7;
+            border-radius: 5px;
+        }
+        .note {
+            font-size: 0.9em;
+            color: #f9e2af;
+            margin-top: 5px;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Music Producer</h1>
+        
+        <div class="input-section">
+            <h2>Audio Input</h2>
+            <div class="controls">
+                <button id="recordBtn">Record Input</button>
+                <button id="stopBtn" disabled>Stop Recording</button>
+                <button id="uploadBtn">Upload Audio</button>
+                <input type="file" id="audioFile" accept="audio/*" style="display: none;">
+            </div>
+            <div class="note">Record a beat or sing/hum a melody to get started, or upload an audio file.</div>
+            <div class="visual-container">
+                <div class="visualization">
+                    <canvas id="inputVisualizer"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="analysis-section">
+            <h2>Audio Analysis</h2>
+            <div class="parameter-controls">
+                <div class="param-group">
+                    <label for="detectedBpm">Detected BPM</label>
+                    <input type="text" id="detectedBpm" readonly value="--">
+                </div>
+                <div class="param-group">
+                    <label for="detectedKey">Detected Key</label>
+                    <input type="text" id="detectedKey" readonly value="--">
+                </div>
+                <div class="param-group">
+                    <label for="detectedGenre">Genre</label>
+                    <select id="detectedGenre">
+                        <option value="pop">Pop</option>
+                        <option value="rock">Rock</option>
+                        <option value="hiphop">Hip Hop</option>
+                        <option value="electronic">Electronic</option>
+                        <option value="jazz">Jazz</option>
+                        <option value="ambient">Ambient</option>
+                    </select>
+                </div>
+                <div class="param-group">
+                    <label for="detectedMood">Mood</label>
+                    <select id="detectedMood">
+                        <option value="energetic">Energetic</option>
+                        <option value="relaxed">Relaxed</option>
+                        <option value="dark">Dark</option>
+                        <option value="uplifting">Uplifting</option>
+                        <option value="melancholic">Melancholic</option>
+                    </select>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="analyzeBtn" disabled>Analyze Audio</button>
+            </div>
+        </div>
+        
+        <div class="composition-section">
+            <h2>Composition Controls</h2>
+            <div class="parameter-controls">
+                <div class="param-group">
+                    <label for="bpm">BPM</label>
+                    <input type="range" id="bpm" min="60" max="180" value="120">
+                    <span id="bpmValue">120</span>
+                </div>
+                <div class="param-group">
+                    <label for="key">Key</label>
+                    <select id="key">
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+                <div class="param-group">
+                    <label for="scale">Scale</label>
+                    <select id="scale">
+                        <option value="major">Major</option>
+                        <option value="minor">Minor</option>
+                        <option value="pentatonic">Pentatonic</option>
+                        <option value="dorian">Dorian</option>
+                        <option value="mixolydian">Mixolydian</option>
+                    </select>
+                </div>
+                <div class="param-group">
+                    <label for="complexity">Complexity</label>
+                    <input type="range" id="complexity" min="1" max="10" value="5">
+                    <span id="complexityValue">5</span>
+                </div>
+            </div>
+            
+            <h3>Instrument Layers</h3>
+            <div class="instrument-tracks">
+                <div class="track">
+                    <span>Bass</span>
+                    <div class="track-controls">
+                        <button class="toggle-btn active" data-track="bass">On</button>
+                        <input type="range" class="track-volume" min="0" max="100" value="80" data-track="bass">
+                        <select class="track-style" data-track="bass">
+                            <option value="simple">Simple</option>
+                            <option value="groovy">Groovy</option>
+                            <option value="melodic">Melodic</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="track">
+                    <span>Drums</span>
+                    <div class="track-controls">
+                        <button class="toggle-btn active" data-track="drums">On</button>
+                        <input type="range" class="track-volume" min="0" max="100" value="80" data-track="drums">
+                        <select class="track-style" data-track="drums">
+                            <option value="basic">Basic</option>
+                            <option value="complex">Complex</option>
+                            <option value="electronic">Electronic</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="track">
+                    <span>Harmony</span>
+                    <div class="track-controls">
+                        <button class="toggle-btn active" data-track="harmony">On</button>
+                        <input type="range" class="track-volume" min="0" max="100" value="70" data-track="harmony">
+                        <select class="track-style" data-track="harmony">
+                            <option value="piano">Piano</option>
+                            <option value="synth">Synth</option>
+                            <option value="guitar">Guitar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="track">
+                    <span>Melody</span>
+                    <div class="track-controls">
+                        <button class="toggle-btn active" data-track="melody">On</button>
+                        <input type="range" class="track-volume" min="0" max="100" value="75" data-track="melody">
+                        <select class="track-style" data-track="melody">
+                            <option value="lead">Lead</option>
+                            <option value="arpeggio">Arpeggio</option>
+                            <option value="pad">Pad</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="track">
+                    <span>Effects</span>
+                    <div class="track-controls">
+                        <button class="toggle-btn active" data-track="effects">On</button>
+                        <input type="range" class="track-volume" min="0" max="100" value="50" data-track="effects">
+                        <select class="track-style" data-track="effects">
+                            <option value="minimal">Minimal</option>
+                            <option value="ambient">Ambient</option>
+                            <option value="glitch">Glitch</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="generateBtn" disabled>Generate Composition</button>
+                <button id="resetBtn">Reset All</button>
+            </div>
+        </div>
+        
+        <div class="output-section">
+            <h2>Output & Mixing</h2>
+            <div class="visual-container">
+                <div class="visualization">
+                    <canvas id="outputVisualizer"></canvas>
+                </div>
+            </div>
+            <div class="parameter-controls">
+                <div class="param-group">
+                    <label for="masterVolume">Master Volume</label>
+                    <input type="range" id="masterVolume" min="0" max="100" value="80">
+                </div>
+                <div class="param-group">
+                    <label for="inputMix">Input/Generated Mix</label>
+                    <input type="range" id="inputMix" min="0" max="100" value="50">
+                    <span>Input < > Generated</span>
+                </div>
+                <div class="param-group">
+                    <label for="reverbLevel">Reverb</label>
+                    <input type="range" id="reverbLevel" min="0" max="100" value="30">
+                </div>
+                <div class="param-group">
+                    <label for="compressorLevel">Compression</label>
+                    <input type="range" id="compressorLevel" min="0" max="100" value="40">
+                </div>
+            </div>
+            <div class="controls">
+                <button id="playBtn" disabled>Play Composition</button>
+                <button id="stopPlayBtn" disabled>Stop</button>
+                <button id="downloadBtn" disabled>Download Mix</button>
+            </div>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div class="log-section" id="logSection">
+                System ready. Record or upload audio to begin.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API context
+        let audioContext;
+        let analyzer;
+        let recorder;
+        let audioChunks = [];
+        let inputAudioBuffer = null;
+        let generatedAudioBuffer = null;
+        let isRecording = false;
+        let isPlaying = false;
+        
+        // DOM Elements
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const audioFileInput = document.getElementById('audioFile');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const playBtn = document.getElementById('playBtn');
+        const stopPlayBtn = document.getElementById('stopPlayBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const progressBar = document.getElementById('progressBar');
+        const logSection = document.getElementById('logSection');
+        
+        // Canvas and visualizers
+        const inputCanvas = document.getElementById('inputVisualizer');
+        const outputCanvas = document.getElementById('outputVisualizer');
+        const inputCtx = inputCanvas.getContext('2d');
+        const outputCtx = outputCanvas.getContext('2d');
+        
+        // Parameter controls
+        const bpmSlider = document.getElementById('bpm');
+        const bpmValue = document.getElementById('bpmValue');
+        const complexitySlider = document.getElementById('complexity');
+        const complexityValue = document.getElementById('complexityValue');
+        
+        // Detected parameters
+        const detectedBpm = document.getElementById('detectedBpm');
+        const detectedKey = document.getElementById('detectedKey');
+        const detectedGenre = document.getElementById('detectedGenre');
+        const detectedMood = document.getElementById('detectedMood');
+        
+        // Initialize the application
+        function init() {
+            // Set up event listeners
+            recordBtn.addEventListener('click', startRecording);
+            stopBtn.addEventListener('click', stopRecording);
+            uploadBtn.addEventListener('click', () => audioFileInput.click());
+            audioFileInput.addEventListener('change', handleFileUpload);
+            analyzeBtn.addEventListener('click', analyzeAudio);
+            generateBtn.addEventListener('click', generateComposition);
+            resetBtn.addEventListener('click', resetApplication);
+            playBtn.addEventListener('click', playComposition);
+            stopPlayBtn.addEventListener('click', stopPlayback);
+            downloadBtn.addEventListener('click', downloadMix);
+            
+            // Parameter control event listeners
+            bpmSlider.addEventListener('input', () => {
+                bpmValue.textContent = bpmSlider.value;
+            });
+            
+            complexitySlider.addEventListener('input', () => {
+                complexityValue.textContent = complexitySlider.value;
+            });
+            
+            // Track toggle buttons
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('active');
+                    btn.textContent = btn.classList.contains('active') ? 'On' : 'Off';
+                });
+            });
+            
+            // Create audio context on user interaction
+            document.body.addEventListener('click', initAudioContext, { once: true });
+            
+            logMessage('System initialized. Click or interact to activate audio.');
+        }
+        
+        // Initialize Audio Context (requires user interaction)
+        function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyzer = audioContext.createAnalyser();
+                    analyzer.fftSize = 2048;
+                    
+                    logMessage('Audio system activated.');
+                    setupVisualizers();
+                } catch (e) {
+                    logMessage('Error initializing audio system: ' + e.message);
+                }
+            }
+        }
+        
+        // Set up audio visualizers
+        function setupVisualizers() {
+            function resizeCanvas() {
+                inputCanvas.width = inputCanvas.offsetWidth;
+                inputCanvas.height = inputCanvas.offsetHeight;
+                outputCanvas.width = outputCanvas.offsetWidth;
+                outputCanvas.height = outputCanvas.offsetHeight;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            function drawVisualizer(canvas, ctx, dataArray) {
+                if (!ctx) return;
+                
+                const bufferLength = dataArray?.length || 0;
+                if (bufferLength === 0) {
+                    ctx.fillStyle = '#313244';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    return;
+                }
+                
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#313244';
+                ctx.fillRect(0, 0, width, height);
+                
+                const barWidth = width / bufferLength * 2.5;
+                let x = 0;
+                
+                ctx.fillStyle = '#cba6f7';
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = (dataArray[i] / 255) * height;
+                    ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+            
+            // Input visualizer
+            function updateInputVisualizer() {
+                if (!analyzer || !isRecording) return;
+                
+                const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+                analyzer.getByteFrequencyData(dataArray);
+                drawVisualizer(inputCanvas, inputCtx, dataArray);
+                
+                if (isRecording) {
+                    requestAnimationFrame(updateInputVisualizer);
+                }
+            }
+            
+            // Initial empty visualizers
+            drawVisualizer(inputCanvas, inputCtx, null);
+            drawVisualizer(outputCanvas, outputCtx, null);
+        }
+        
+        // Start recording audio
+        async function startRecording() {
+            if (!audioContext) initAudioContext();
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                mediaStreamSource.connect(analyzer);
+                
+                recorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                recorder.ondataavailable = e => {
+                    audioChunks.push(e.data);
+                };
+                
+                recorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processRecordedAudio(audioBlob);
+                };
+                
+                recorder.start();
+                isRecording = true;
+                logMessage('Recording started...');
+                
+                // Update UI
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                uploadBtn.disabled = true;
+                
+                // Start visualizer
+                requestAnimationFrame(updateInputVisualizer);
+                
+            } catch (error) {
+                logMessage('Error starting recording: ' + error.message);
+            }
+        }
+        
+        // Stop recording audio
+        function stopRecording() {
+            if (recorder && recorder.state !== 'inactive') {
+                recorder.stop();
+                isRecording = false;
+                logMessage('Recording stopped.');
+                
+                // Update UI
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                uploadBtn.disabled = false;
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        // Process recorded audio
+        async function processRecordedAudio(audioBlob) {
+            try {
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                inputAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                logMessage('Audio processed successfully. Ready for analysis.');
+                analyzeBtn.disabled = false;
+                
+            } catch (error) {
+                logMessage('Error processing audio: ' + error.message);
+            }
+        }
+        
+        // Handle file upload
+        async function handleFileUpload(event) {
+            if (!audioContext) initAudioContext();
+            
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('audio/')) {
+                logMessage('Error: Please upload an audio file.');
+                return;
+            }
+            
+            try {
+                logMessage(`Loading file: ${file.name}`);
+                
+                const arrayBuffer = await file.arrayBuffer();
+                inputAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                logMessage('Audio file loaded successfully. Ready for analysis.');
+                analyzeBtn.disabled = false;
+                
+                // Update UI with filename
+                const fileNameDisplay = document.createElement('div');
+                fileNameDisplay.className = 'note';
+                fileNameDisplay.textContent = `Loaded: ${file.name}`;
+                
+                const existingNote = document.querySelector('.input-section .note:not(:first-child)');
+                if (existingNote) {
+                    existingNote.replaceWith(fileNameDisplay);
+                } else {
+                    document.querySelector('.input-section .note').after(fileNameDisplay);
+                }
+                
+            } catch (error) {
+                logMessage('Error loading audio file: ' + error.message);
+            }
+        }
+        
+        // Analyze audio for musical properties
+        function analyzeAudio() {
+            if (!inputAudioBuffer) {
+                logMessage('No audio to analyze. Please record or upload audio first.');
+                return;
+            }
+            
+            logMessage('Analyzing audio...');
+            progressBar.value = 0;
+            
+            // Simulate analysis progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.value = progress;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    completeAnalysis();
+                }
+            }, 100);
+        }
+        
+        // Simulated analysis completion
+        function completeAnalysis() {
+            // In a real implementation, this would use actual audio analysis algorithms
+            // This is a simplified simulation of detected values
+            
+            // Simulate detecting tempo (BPM)
+            const estimatedBpm = Math.floor(Math.random() * 40) + 90; // Random BPM between 90-130
+            detectedBpm.value = estimatedBpm;
+            bpmSlider.value = estimatedBpm;
+            bpmValue.textContent = estimatedBpm;
+            
+            // Simulate key detection
+            const keys = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C#', 'D#', 'F#', 'G#', 'A#'];
+            const scales = ['major', 'minor'];
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            const randomScale = scales[Math.floor(Math.random() * scales.length)];
+            detectedKey.value = `${randomKey} ${randomScale}`;
+            
+            document.getElementById('key').value = randomKey;
+            document.getElementById('scale').value = randomScale === 'major' ? 'major' : 'minor';
+            
+            // Randomize genre and mood based on audio characteristics
+            const genres = ['pop', 'rock', 'hiphop', 'electronic', 'jazz', 'ambient'];
+            const moods = ['energetic', 'relaxed', 'dark', 'uplifting', 'melancholic'];
+            
+            detectedGenre.value = genres[Math.floor(Math.random() * genres.length)];
+            detectedMood.value = moods[Math.floor(Math.random() * moods.length)];
+            
+            logMessage('Analysis complete. Ready to generate composition.');
+            generateBtn.disabled = false;
+        }
+        
+        // Generate music composition based on analysis
+        function generateComposition() {
+            if (!inputAudioBuffer) {
+                logMessage('No input audio available.');
+                return;
+            }
+            
+            logMessage('Generating composition...');
+            progressBar.value = 0;
+            
+            // Collect parameters for composition
+            const params = {
+                bpm: parseInt(bpmSlider.value),
+                key: document.getElementById('key').value,
+                scale: document.getElementById('scale').value,
+                complexity: parseInt(complexitySlider.value),
+                genre: detectedGenre.value,
+                mood: detectedMood.value,
+                tracks: {}
+            };
+            
+            // Collect track parameters
+            document.querySelectorAll('.track').forEach(track => {
+                const trackName = track.querySelector('span').textContent.toLowerCase();
+                const isActive = track.querySelector('.toggle-btn').classList.contains('active');
+                const volume = parseInt(track.querySelector('.track-volume').value);
+                const style = track.querySelector('.track-style').value;
+                
+                params.tracks[trackName] = { active: isActive, volume, style };
+            });
+            
+            // Simulate generation progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 2;
+                progressBar.value = progress;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    simulateGeneratedAudio();
+                }
+            }, 100);
+        }
+        
+        // Simulate generated audio (in a real implementation, this would create actual synthesized audio)
+        function simulateGeneratedAudio() {
+            // For this demo, we'll create a copy of the input audio to represent the generated audio
+            // In a real implementation, this would synthesize new audio based on the analysis
+            
+            generatedAudioBuffer = audioContext.createBuffer(
+                inputAudioBuffer.numberOfChannels,
+                inputAudioBuffer.length,
+                inputAudioBuffer.sampleRate
+            );
+            
+            // Copy input audio to generated buffer (placeholder for real generation)
+            for (let channel = 0; channel < inputAudioBuffer.numberOfChannels; channel++) {
+                const inputData = inputAudioBuffer.getChannelData(channel);
+                const outputData = generatedAudioBuffer.getChannelData(channel);
+                
+                // Apply some basic transformation to simulate generation
+                for (let i = 0; i < inputData.length; i++) {
+                    // Add some harmonics and effects (just a simple example)
+                    outputData[i] = inputData[i] * 0.7 + 
+                                   (Math.sin(i / 100) * 0.15) + 
+                                   (Math.sin(i / 50) * 0.1) +
+                                   (Math.random() * 0.05);
+                }
+            }
+            
+            logMessage('Composition generated successfully!');
+            drawOutputVisualizer();
+            
+            // Enable playback controls
+            playBtn.disabled = false;
+            downloadBtn.disabled = false;
+        }
+        
+        // Draw output visualizer with generated audio data
+        function drawOutputVisualizer() {
+            if (!generatedAudioBuffer || !outputCtx) return;
+            
+            const data = generatedAudioBuffer.getChannelData(0);
+            const step = Math.floor(data.length / outputCanvas.width);
+            
+            outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+            outputCtx.fillStyle = '#313244';
+            outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+            
+            outputCtx.beginPath();
+            outputCtx.moveTo(0, outputCanvas.height / 2);
+            outputCtx.strokeStyle = '#a6e3a1';
+            outputCtx.lineWidth = 2;
+            
+            for (let i = 0; i < outputCanvas.width; i++) {
+                const dataIndex = i * step;
+                const y = (1 - data[dataIndex]) * (outputCanvas.height / 2);
+                outputCtx.lineTo(i, y);
+            }
+            
+            outputCtx.stroke();
+        }
+        
+        // Play the composition
+        function playComposition() {
+            if (!generatedAudioBuffer || isPlaying) return;
+            
+            // Create source nodes
+            const inputSource = audioContext.createBufferSource();
+            inputSource.buffer = inputAudioBuffer;
+            
+            const generatedSource = audioContext.createBufferSource();
+            generatedSource.buffer = generatedAudioBuffer;
+            
+            // Create gain nodes for mixing
+            const inputGain = audioContext.createGain();
+            const generatedGain = audioContext.createGain();
+            
+            // Get mix ratio (0-1)
+            const mixRatio = document.getElementById('inputMix').value / 100;
+            inputGain.gain.value = 1 - mixRatio;
+            generatedGain.gain.value = mixRatio;
+            
+            // Create master gain (volume)
+            const masterGain = audioContext.createGain();
+            masterGain.gain.value = document.getElementById('masterVolume').value / 100;
+            
+            // Create effects
+            const compressor = audioContext.createDynamicsCompressor();
+            compressor.threshold.value = -24 + (document.getElementById('compressorLevel').value / 100) * 24;
+            compressor.ratio.value = 1 + (document.getElementById('compressorLevel').value / 100) * 19;
+            
+            // Create reverb (simplified simulation)
+            const convolver = audioContext.createConvolver();
+            const reverbLevel = document.getElementById('reverbLevel').value / 100;
+            
+            // Simplified impulse response generation for reverb
+            const reverbDuration = 2 + reverbLevel * 3; // 2-5 seconds based on level
+            const decayRate = 0.01 + reverbLevel * 0.1;
+            const impulseLength = audioContext.sampleRate * reverbDuration;
+            const impulse = audioContext.createBuffer(2, impulseLength, audioContext.sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const impulseData = impulse.getChannelData(channel);
+                for (let i = 0; i < impulseLength; i++) {
+                    impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, decayRate);
+                }
+            }
+            
+            convolver.buffer = impulse;
+            
+            // Create analyzer for visualization during playback
+            const playbackAnalyzer = audioContext.createAnalyser();
+            playbackAnalyzer.fftSize = 2048;
+            
+            // Connect the nodes
+            // Input audio path
+            inputSource.connect(inputGain);
+            inputGain.connect(masterGain);
+            
+            // Generated audio path with reverb split
+            generatedSource.connect(generatedGain);
+            
+            // Split generated audio for dry/wet reverb
+            const dryGain = audioContext.createGain();
+            const wetGain = audioContext.createGain();
+            dryGain.gain.value = 1 - (reverbLevel * 0.8); // Dry signal (no reverb)
+            wetGain.gain.value = reverbLevel * 0.8; // Wet signal (with reverb)
+            
+            generatedGain.connect(dryGain);
+            generatedGain.connect(wetGain);
+            
+            wetGain.connect(convolver);
+            convolver.connect(masterGain);
+            dryGain.connect(masterGain);
+            
+            // Final output chain
+            masterGain.connect(compressor);
+            compressor.connect(playbackAnalyzer);
+            playbackAnalyzer.connect(audioContext.destination);
+            
+            // Start playback
+            inputSource.start();
+            generatedSource.start();
+            isPlaying = true;
+            
+            // Update UI
+            playBtn.disabled = true;
+            stopPlayBtn.disabled = false;
+            logMessage('Playing composition...');
+            
+            // Set up visualizer during playback
+            const dataArray = new Uint8Array(playbackAnalyzer.frequencyBinCount);
+            
+            function updatePlaybackVisualizer() {
+                if (!isPlaying) return;
+                
+                playbackAnalyzer.getByteFrequencyData(dataArray);
+                
+                // Draw on output visualizer
+                outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+                outputCtx.fillStyle = '#313244';
+                outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+                
+                const barWidth = outputCanvas.width / dataArray.length * 4;
+                let x = 0;
+                
+                outputCtx.fillStyle = '#a6e3a1';
+                for (let i = 0; i < dataArray.length; i++) {
+                    const barHeight = (dataArray[i] / 255) * outputCanvas.height;
+                    outputCtx.fillRect(x, outputCanvas.height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+                
+                if (isPlaying) {
+                    requestAnimationFrame(updatePlaybackVisualizer);
+                }
+            }
+            
+            updatePlaybackVisualizer();
+            
+            // Stop when audio ends
+            generatedSource.onended = () => {
+                stopPlayback();
+            };
+        }
+        
+        // Stop playback
+        function stopPlayback() {
+            if (!isPlaying) return;
+            
+            isPlaying = false;
+            playBtn.disabled = false;
+            stopPlayBtn.disabled = true;
+            logMessage('Playback stopped.');
+            
+            // Redraw the static output visualizer
+            drawOutputVisualizer();
+        }
+        
+        // Download the mixed audio
+        function downloadMix() {
+            if (!inputAudioBuffer || !generatedAudioBuffer) {
+                logMessage('No audio to download.');
+                return;
+            }
+            
+            logMessage('Preparing download...');
+            progressBar.value = 0;
+            
+            // Create an offline audio context for rendering
+            const offlineCtx = new OfflineAudioContext(
+                2,
+                Math.max(inputAudioBuffer.length, generatedAudioBuffer.length),
+                audioContext.sampleRate
+            );
+            
+            // Input source
+            const inputSource = offlineCtx.createBufferSource();
+            inputSource.buffer = inputAudioBuffer;
+            
+            // Generated source
+            const generatedSource = offlineCtx.createBufferSource();
+            generatedSource.buffer = generatedAudioBuffer;
+            
+            // Get mix ratio (0-1)
+            const mixRatio = document.getElementById('inputMix').value / 100;
+            
+            // Create gain nodes
+            const inputGain = offlineCtx.createGain();
+            const generatedGain = offlineCtx.createGain();
+            const masterGain = offlineCtx.createGain();
+            
+            // Set gain values
+            inputGain.gain.value = 1 - mixRatio;
+            generatedGain.gain.value = mixRatio;
+            masterGain.gain.value = document.getElementById('masterVolume').value / 100;
+            
+            // Create effects
+            const compressor = offlineCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24 + (document.getElementById('compressorLevel').value / 100) * 24;
+            compressor.ratio.value = 1 + (document.getElementById('compressorLevel').value / 100) * 19;
+            
+            // Reverb effect
+            const convolver = offlineCtx.createConvolver();
+            const reverbLevel = document.getElementById('reverbLevel').value / 100;
+            
+            // Simplified impulse response for reverb
+            const reverbDuration = 2 + reverbLevel * 3;
+            const impulseLength = offlineCtx.sampleRate * reverbDuration;
+            const impulse = offlineCtx.createBuffer(2, impulseLength, offlineCtx.sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const impulseData = impulse.getChannelData(channel);
+                for (let i = 0; i < impulseLength; i++) {
+                    impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, 0.1);
+                }
+            }
+            
+            convolver.buffer = impulse;
+            
+            // Connect the nodes - similar to playback
+            inputSource.connect(inputGain);
+            inputGain.connect(masterGain);
+            
+            generatedSource.connect(generatedGain);
+            
+            // Dry/wet reverb
+            const dryGain = offlineCtx.createGain();
+            const wetGain = offlineCtx.createGain();
+            dryGain.gain.value = 1 - (reverbLevel * 0.8);
+            wetGain.gain.value = reverbLevel * 0.8;
+            
+            generatedGain.connect(dryGain);
+            generatedGain.connect(wetGain);
+            
+            wetGain.connect(convolver);
+            convolver.connect(masterGain);
+            dryGain.connect(masterGain);
+            
+            masterGain.connect(compressor);
+            compressor.connect(offlineCtx.destination);
+            
+            // Start rendering
+            inputSource.start();
+            generatedSource.start();
+            
+            // Show progress
+            let renderingProgress = 0;
+            const progressInterval = setInterval(() => {
+                renderingProgress += 5;
+                if (renderingProgress > 95) renderingProgress = 95;
+                progressBar.value = renderingProgress;
+            }, 200);
+            
+            // Render the audio
+            offlineCtx.startRendering().then(renderedBuffer => {
+                clearInterval(progressInterval);
+                progressBar.value = 100;
+                
+                // Convert to WAV
+                const numberOfChannels = renderedBuffer.numberOfChannels;
+                const length = renderedBuffer.length;
+                const sampleRate = renderedBuffer.sampleRate;
+                const wavBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+                const view = new DataView(wavBuffer);
+                
+                // WAV header
+                writeString(view, 0, 'RIFF');
+                view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+                writeString(view, 8, 'WAVE');
+                writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, 1, true);
+                view.setUint16(22, numberOfChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+                view.setUint16(32, numberOfChannels * 2, true);
+                view.setUint16(34, 16, true);
+                writeString(view, 36, 'data');
+                view.setUint32(40, length * numberOfChannels * 2, true);
+                
+                // Write audio data
+                const offset = 44;
+                for (let i = 0; i < length; i++) {
+                    for (let channel = 0; channel < numberOfChannels; channel++) {
+                        const sample = Math.max(-1, Math.min(1, renderedBuffer.getChannelData(channel)[i]));
+                        view.setInt16(offset + (i * numberOfChannels + channel) * 2, sample * 0x7FFF, true);
+                    }
+                }
+                
+                // Create download link
+                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = 'ai-music-composition.wav';
+                downloadLink.click();
+                
+                logMessage('Download complete!');
+            }).catch(err => {
+                clearInterval(progressInterval);
+                logMessage('Error rendering audio: ' + err.message);
+            });
+            
+            // Helper to write strings to the WAV header
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+        }
+        
+        // Reset the application
+        function resetApplication() {
+            // Reset audio buffers
+            inputAudioBuffer = null;
+            generatedAudioBuffer = null;
+            
+            // Stop any active playback
+            if (isPlaying) {
+                stopPlayback();
+            }
+            
+            // Reset UI elements
+            detectedBpm.value = '--';
+            detectedKey.value = '--';
+            detectedGenre.value = 'pop';
+            detectedMood.value = 'energetic';
+            
+            bpmSlider.value = 120;
+            bpmValue.textContent = '120';
+            
+            document.getElementById('key').value = 'C';
+            document.getElementById('scale').value = 'major';
+            
+            complexitySlider.value = 5;
+            complexityValue.textContent = '5';
+            
+            // Reset track controls
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.add('active');
+                btn.textContent = 'On';
+            });
+            
+            document.querySelectorAll('.track-volume').forEach(slider => {
+                slider.value = 80;
+            });
+            
+            document.getElementById('masterVolume').value = 80;
+            document.getElementById('inputMix').value = 50;
+            document.getElementById('reverbLevel').value = 30;
+            document.getElementById('compressorLevel').value = 40;
+            
+            // Reset visualizers
+            if (inputCtx && outputCtx) {
+                inputCtx.fillStyle = '#313244';
+                inputCtx.fillRect(0, 0, inputCanvas.width, inputCanvas.height);
+                
+                outputCtx.fillStyle = '#313244';
+                outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+            }
+            
+            // Reset buttons
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
+            uploadBtn.disabled = false;
+            analyzeBtn.disabled = true;
+            generateBtn.disabled = true;
+            playBtn.disabled = true;
+            stopPlayBtn.disabled = true;
+            downloadBtn.disabled = true;
+            
+            // Reset progress
+            progressBar.value = 0;
+            
+            // Log reset
+            logMessage('Application reset. Ready for new audio input.');
+        }
+        
+        // Utility function for logging messages
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logSection.appendChild(logEntry);
+            logSection.scrollTop = logSection.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        // Initialize the application when loaded
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
